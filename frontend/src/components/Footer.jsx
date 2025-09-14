@@ -28,33 +28,8 @@ const Footer = () => {
               <li>
                 <Link to="/profile">Profile</Link>
               </li>
-              <li>
-                <Link to="/about">About</Link>
-              </li>
-              <li>
-                <Link to="/contact">Contact</Link>
-              </li>
             </ul>
           </nav>
-
-          {/* Social Media */}
-          <div className="footer-section">
-            <h4 className="footer-heading">Follow Us</h4>
-            <div className="social-links">
-              <a href="#" className="social-link">
-                📘 Facebook
-              </a>
-              <a href="#" className="social-link">
-                🐦 Twitter
-              </a>
-              <a href="#" className="social-link">
-                📷 Instagram
-              </a>
-              <a href="#" className="social-link">
-                📺 YouTube
-              </a>
-            </div>
-          </div>
         </div>
 
         <div className="footer-bottom">

@@ -60,7 +60,7 @@ function Signup() {
     return newErrors;
   };
 
-  const handleSubmit = (e) => {
+  const handleSubmit = async (e) => {
     e.preventDefault();
 
     const formErrors = validateForm();
@@ -71,32 +71,21 @@ function Signup() {
 
     setIsLoading(true);
 
-    // Simulate signup process
-    setTimeout(() => {
-      // Check if user already exists
-      const existingUsers = JSON.parse(localStorage.getItem("users") || "[]");
-      const userExists = existingUsers.find((u) => u.email === formData.email);
-
-      if (userExists) {
-        setErrors({ general: "An account with this email already exists" });
-        setIsLoading(false);
-        return;
-      }
-
-      // Create new user and auto-login
-      try {
-        signup({
-          name: formData.name,
-          email: formData.email,
-          password: formData.password,
-        });
-        navigate("/");
-      } catch (error) {
-        setErrors({ general: "Account creation failed. Please try again." });
-      }
-
+    try {
+      // Use backend API for signup
+      await signup({
+        name: formData.name,
+        email: formData.email,
+        password: formData.password,
+      });
+      navigate("/");
+    } catch (error) {
+      setErrors({
+        general: error.message || "Account creation failed. Please try again.",
+      });
+    } finally {
       setIsLoading(false);
-    }, 1000);
+    }
   };
 
   return (

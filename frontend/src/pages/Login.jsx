@@ -46,7 +46,7 @@ function Login() {
     return newErrors;
   };
 
-  const handleSubmit = (e) => {
+  const handleSubmit = async (e) => {
     e.preventDefault();
 
     const formErrors = validateForm();
@@ -57,27 +57,20 @@ function Login() {
 
     setIsLoading(true);
 
-    // Simulate login process
-    setTimeout(() => {
-      // Check if user exists (simple check against localStorage)
-      const existingUsers = JSON.parse(localStorage.getItem("users") || "[]");
-      const user = existingUsers.find(
-        (u) => u.email === formData.email && u.password === formData.password
-      );
-
-      if (user) {
-        // Login successful
-        login({
-          id: user.id,
-          name: user.name,
-          email: user.email,
-        });
-        navigate("/");
-      } else {
-        setErrors({ general: "Invalid email or password" });
-      }
+    try {
+      // Use backend API for login
+      await login({
+        email: formData.email,
+        password: formData.password,
+      });
+      navigate("/");
+    } catch (error) {
+      setErrors({
+        general: error.message || "Invalid email or password",
+      });
+    } finally {
       setIsLoading(false);
-    }, 1000);
+    }
   };
 
   return (

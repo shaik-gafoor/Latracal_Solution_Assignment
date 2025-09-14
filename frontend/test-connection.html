@@ -1,0 +1,440 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Backend Connection Test</title>
+    <style>
+      body {
+        font-family: Arial, sans-serif;
+        max-width: 800px;
+        margin: 0 auto;
+        padding: 20px;
+        background-color: #f5f5f5;
+      }
+      .container {
+        background: white;
+        padding: 20px;
+        border-radius: 8px;
+        box-shadow: 0 2px 10px rgba(0, 0, 0, 0.1);
+      }
+      .test-section {
+        margin: 20px 0;
+        padding: 15px;
+        border: 1px solid #ddd;
+        border-radius: 5px;
+      }
+      .success {
+        background-color: #d4edda;
+        border-color: #c3e6cb;
+        color: #155724;
+      }
+      .error {
+        background-color: #f8d7da;
+        border-color: #f5c6cb;
+        color: #721c24;
+      }
+      .loading {
+        background-color: #fff3cd;
+        border-color: #ffeaa7;
+        color: #856404;
+      }
+      button {
+        background: #007bff;
+        color: white;
+        border: none;
+        padding: 10px 15px;
+        border-radius: 5px;
+        cursor: pointer;
+        margin: 5px;
+      }
+      button:hover {
+        background: #0056b3;
+      }
+      .form-group {
+        margin: 10px 0;
+      }
+      input,
+      textarea {
+        width: 100%;
+        padding: 8px;
+        border: 1px solid #ddd;
+        border-radius: 4px;
+        margin: 5px 0;
+      }
+      pre {
+        background: #f8f9fa;
+        padding: 10px;
+        border-radius: 4px;
+        overflow-x: auto;
+        white-space: pre-wrap;
+      }
+    </style>
+  </head>
+  <body>
+    <div class="container">
+      <h1>Frontend ↔ Backend Connection Test</h1>
+      <p>
+        This page tests the connection between your frontend and backend API.
+      </p>
+
+      <!-- Health Check -->
+      <div class="test-section" id="health-section">
+        <h3>🏥 Health Check</h3>
+        <button onclick="testHealth()">Test Backend Health</button>
+        <div id="health-result"></div>
+      </div>
+
+      <!-- Authentication Test -->
+      <div class="test-section" id="auth-section">
+        <h3>🔐 Authentication Test</h3>
+
+        <div class="form-group">
+          <h4>Register New User</h4>
+          <input
+            type="text"
+            id="reg-name"
+            placeholder="Full Name"
+            value="Test User"
+          />
+          <input
+            type="email"
+            id="reg-email"
+            placeholder="Email"
+            value="test@example.com"
+          />
+          <input
+            type="password"
+            id="reg-password"
+            placeholder="Password"
+            value="password123"
+          />
+          <button onclick="testRegister()">Register</button>
+        </div>
+
+        <div class="form-group">
+          <h4>Login</h4>
+          <input
+            type="email"
+            id="login-email"
+            placeholder="Email"
+            value="test@example.com"
+          />
+          <input
+            type="password"
+            id="login-password"
+            placeholder="Password"
+            value="password123"
+          />
+          <button onclick="testLogin()">Login</button>
+        </div>
+
+        <div id="auth-result"></div>
+      </div>
+
+      <!-- Movies Test -->
+      <div class="test-section" id="movies-section">
+        <h3>🎬 Movies API Test</h3>
+        <button onclick="testMovies()">Get All Movies</button>
+        <button onclick="testMovieDetails()">Get Movie Details</button>
+        <div id="movies-result"></div>
+      </div>
+
+      <!-- Reviews Test -->
+      <div class="test-section" id="reviews-section">
+        <h3>⭐ Reviews API Test</h3>
+        <div class="form-group">
+          <input
+            type="number"
+            id="review-rating"
+            placeholder="Rating (1-5)"
+            value="5"
+            min="1"
+            max="5"
+          />
+          <textarea id="review-comment" placeholder="Review comment">
+Amazing movie! Loved it.</textarea
+          >
+          <button onclick="testAddReview()">Add Review</button>
+        </div>
+        <div id="reviews-result"></div>
+      </div>
+
+      <div class="test-section">
+        <h3>📊 Connection Status</h3>
+        <p><strong>Backend URL:</strong> http://localhost:5000</p>
+        <p>
+          <strong>Frontend URL:</strong> http://localhost:5173 (when Vite runs)
+        </p>
+        <div id="connection-status">Ready to test...</div>
+      </div>
+    </div>
+
+    <script>
+      const API_BASE_URL = "http://localhost:5000";
+      let authToken = null;
+      let currentMovieId = null;
+
+      // Helper function to make API calls
+      async function apiCall(endpoint, options = {}) {
+        try {
+          const url = `${API_BASE_URL}${endpoint}`;
+          const headers = {
+            "Content-Type": "application/json",
+            ...options.headers,
+          };
+
+          if (authToken) {
+            headers.Authorization = `Bearer ${authToken}`;
+          }
+
+          const response = await fetch(url, {
+            ...options,
+            headers,
+          });
+
+          const data = await response.json();
+
+          if (!response.ok) {
+            throw new Error(data.message || `HTTP ${response.status}`);
+          }
+
+          return { success: true, data };
+        } catch (error) {
+          return { success: false, error: error.message };
+        }
+      }
+
+      // Test health endpoint
+      async function testHealth() {
+        const section = document.getElementById("health-result");
+        section.innerHTML =
+          '<div class="loading">Testing backend health...</div>';
+
+        const result = await apiCall("/health");
+
+        if (result.success) {
+          section.innerHTML = `
+                    <div class="success">
+                        <h4>✅ Backend is running!</h4>
+                        <pre>${JSON.stringify(result.data, null, 2)}</pre>
+                    </div>
+                `;
+        } else {
+          section.innerHTML = `
+                    <div class="error">
+                        <h4>❌ Backend connection failed</h4>
+                        <p>${result.error}</p>
+                        <p>Make sure your backend server is running on port 5000</p>
+                    </div>
+                `;
+        }
+      }
+
+      // Test user registration
+      async function testRegister() {
+        const section = document.getElementById("auth-result");
+        section.innerHTML = '<div class="loading">Registering user...</div>';
+
+        const userData = {
+          name: document.getElementById("reg-name").value,
+          email: document.getElementById("reg-email").value,
+          password: document.getElementById("reg-password").value,
+        };
+
+        const result = await apiCall("/api/auth/register", {
+          method: "POST",
+          body: JSON.stringify(userData),
+        });
+
+        if (result.success) {
+          authToken = result.data.token;
+          section.innerHTML = `
+                    <div class="success">
+                        <h4>✅ Registration successful!</h4>
+                        <p>Welcome, ${result.data.name}!</p>
+                        <p>Token stored for subsequent API calls.</p>
+                    </div>
+                `;
+        } else {
+          section.innerHTML = `
+                    <div class="error">
+                        <h4>❌ Registration failed</h4>
+                        <p>${result.error}</p>
+                    </div>
+                `;
+        }
+      }
+
+      // Test user login
+      async function testLogin() {
+        const section = document.getElementById("auth-result");
+        section.innerHTML = '<div class="loading">Logging in...</div>';
+
+        const credentials = {
+          email: document.getElementById("login-email").value,
+          password: document.getElementById("login-password").value,
+        };
+
+        const result = await apiCall("/api/auth/login", {
+          method: "POST",
+          body: JSON.stringify(credentials),
+        });
+
+        if (result.success) {
+          authToken = result.data.token;
+          section.innerHTML = `
+                    <div class="success">
+                        <h4>✅ Login successful!</h4>
+                        <p>Welcome back, ${result.data.name}!</p>
+                        <p>Token stored for subsequent API calls.</p>
+                    </div>
+                `;
+        } else {
+          section.innerHTML = `
+                    <div class="error">
+                        <h4>❌ Login failed</h4>
+                        <p>${result.error}</p>
+                    </div>
+                `;
+        }
+      }
+
+      // Test movies API
+      async function testMovies() {
+        const section = document.getElementById("movies-result");
+        section.innerHTML = '<div class="loading">Fetching movies...</div>';
+
+        const result = await apiCall("/api/movies");
+
+        if (result.success) {
+          const movies = result.data.movies || result.data;
+          currentMovieId = movies[0]?._id; // Store first movie ID for other tests
+
+          section.innerHTML = `
+                    <div class="success">
+                        <h4>✅ Movies loaded successfully!</h4>
+                        <p>Found ${movies.length} movies</p>
+                        <div style="max-height: 300px; overflow-y: auto;">
+                            ${movies
+                              .map(
+                                (movie) => `
+                                <div style="border: 1px solid #ddd; padding: 10px; margin: 5px 0;">
+                                    <strong>${movie.title}</strong> (${movie.releaseYear})
+                                    <br><small>ID: ${movie._id}</small>
+                                    <br>Rating: ${movie.averageRating}/5 ⭐
+                                </div>
+                            `
+                              )
+                              .join("")}
+                        </div>
+                    </div>
+                `;
+        } else {
+          section.innerHTML = `
+                    <div class="error">
+                        <h4>❌ Failed to load movies</h4>
+                        <p>${result.error}</p>
+                        ${
+                          !authToken
+                            ? "<p>You may need to login first.</p>"
+                            : ""
+                        }
+                    </div>
+                `;
+        }
+      }
+
+      // Test movie details
+      async function testMovieDetails() {
+        if (!currentMovieId) {
+          document.getElementById("movies-result").innerHTML += `
+                    <div class="error">
+                        <p>❌ No movie ID available. Please load movies first.</p>
+                    </div>
+                `;
+          return;
+        }
+
+        const section = document.getElementById("movies-result");
+        section.innerHTML +=
+          '<div class="loading">Fetching movie details...</div>';
+
+        const result = await apiCall(`/api/movies/${currentMovieId}`);
+
+        if (result.success) {
+          const movie = result.data.movie || result.data;
+          section.innerHTML += `
+                    <div class="success">
+                        <h4>✅ Movie details loaded!</h4>
+                        <pre>${JSON.stringify(movie, null, 2)}</pre>
+                    </div>
+                `;
+        } else {
+          section.innerHTML += `
+                    <div class="error">
+                        <h4>❌ Failed to load movie details</h4>
+                        <p>${result.error}</p>
+                    </div>
+                `;
+        }
+      }
+
+      // Test adding a review
+      async function testAddReview() {
+        if (!currentMovieId) {
+          document.getElementById("reviews-result").innerHTML = `
+                    <div class="error">
+                        <p>❌ No movie ID available. Please load movies first.</p>
+                    </div>
+                `;
+          return;
+        }
+
+        if (!authToken) {
+          document.getElementById("reviews-result").innerHTML = `
+                    <div class="error">
+                        <p>❌ Please login first to add reviews.</p>
+                    </div>
+                `;
+          return;
+        }
+
+        const section = document.getElementById("reviews-result");
+        section.innerHTML = '<div class="loading">Adding review...</div>';
+
+        const reviewData = {
+          rating: parseInt(document.getElementById("review-rating").value),
+          comment: document.getElementById("review-comment").value,
+          spoilerAlert: false,
+        };
+
+        const result = await apiCall(`/api/movies/${currentMovieId}/reviews`, {
+          method: "POST",
+          body: JSON.stringify(reviewData),
+        });
+
+        if (result.success) {
+          section.innerHTML = `
+                    <div class="success">
+                        <h4>✅ Review added successfully!</h4>
+                        <pre>${JSON.stringify(result.data, null, 2)}</pre>
+                    </div>
+                `;
+        } else {
+          section.innerHTML = `
+                    <div class="error">
+                        <h4>❌ Failed to add review</h4>
+                        <p>${result.error}</p>
+                    </div>
+                `;
+        }
+      }
+
+      // Auto-test health on page load
+      window.onload = function () {
+        testHealth();
+      };
+    </script>
+  </body>
+</html>

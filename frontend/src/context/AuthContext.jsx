@@ -1,4 +1,5 @@
 import React, { createContext, useContext, useState, useEffect } from "react";
+import { authAPI } from "../services/api";
 
 const AuthContext = createContext();
 
@@ -28,14 +29,22 @@ export const AuthProvider = ({ children }) => {
     setIsLoading(false);
   }, []);
 
-  const login = (userData) => {
-    const user = {
-      id: userData.id,
-      name: userData.name,
-      email: userData.email,
-    };
-    setCurrentUser(user);
-    localStorage.setItem("currentUser", JSON.stringify(user));
+  const login = async (credentials) => {
+    try {
+      const response = await authAPI.login(credentials);
+      const user = {
+        id: response.id,
+        name: response.name,
+        email: response.email,
+        token: response.token,
+      };
+      setCurrentUser(user);
+      localStorage.setItem("currentUser", JSON.stringify(user));
+      return user;
+    } catch (error) {
+      console.error("Login error:", error);
+      throw error;
+    }
   };
 
   const logout = () => {
@@ -43,24 +52,22 @@ export const AuthProvider = ({ children }) => {
     localStorage.removeItem("currentUser");
   };
 
-  const signup = (userData) => {
-    // Generate new user ID
-    const newUser = {
-      id: Date.now().toString(),
-      name: userData.name.trim(),
-      email: userData.email,
-      password: userData.password,
-      createdAt: new Date().toISOString(),
-    };
-
-    // Save to users list
-    const existingUsers = JSON.parse(localStorage.getItem("users") || "[]");
-    const updatedUsers = [...existingUsers, newUser];
-    localStorage.setItem("users", JSON.stringify(updatedUsers));
-
-    // Auto-login after signup
-    login(newUser);
-    return newUser;
+  const signup = async (userData) => {
+    try {
+      const response = await authAPI.register(userData);
+      const user = {
+        id: response.id,
+        name: response.name,
+        email: response.email,
+        token: response.token,
+      };
+      setCurrentUser(user);
+      localStorage.setItem("currentUser", JSON.stringify(user));
+      return user;
+    } catch (error) {
+      console.error("Signup error:", error);
+      throw error;
+    }
   };
 
   const isAuthenticated = () => {

@@ -1,5 +1,5 @@
 // API configuration and service functions for connecting to backend
-const API_BASE_URL = "http://localhost:5000";
+const API_BASE_URL = process.env.SERVER_URL;
 
 // Get auth token from localStorage
 const getAuthToken = () => {

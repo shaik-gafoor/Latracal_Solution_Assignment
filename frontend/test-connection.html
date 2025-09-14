@@ -171,7 +171,7 @@ Amazing movie! Loved it.</textarea
     </div>
 
     <script>
-      const API_BASE_URL = "http://localhost:5000";
+      const API_BASE_URL = process.env.SERVER_URL;
       let authToken = null;
       let currentMovieId = null;
 

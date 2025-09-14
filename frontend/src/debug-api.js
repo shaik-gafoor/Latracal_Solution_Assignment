@@ -1,7 +1,7 @@
 // Debug API endpoints - place this file in frontend/src/debug-api.js
 // Run this in browser console to test API endpoints
 
-const API_BASE_URL = process.env.SERVER_URL;
+const API_BASE_URL = import.meta.env.VITE_SERVER_URL;
 
 const testEndpoints = async () => {
   console.log("🔍 Testing API endpoints...");

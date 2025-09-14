@@ -1,5 +1,6 @@
 // API configuration and service functions for connecting to backend
-const API_BASE_URL = process.env.SERVER_URL;
+const API_BASE_URL =
+  import.meta.env.VITE_VITE_SERVER_URL || "http://localhost:3000";
 
 // Get auth token from localStorage
 const getAuthToken = () => {

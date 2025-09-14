@@ -1305,6 +1305,10 @@ body {
   .hero-title {
     font-size: 2rem;
   }
+
+  .mobile-toggle {
+    display: block;
+  }
 }
 
 .nav-open {
@@ -1319,10 +1323,6 @@ body {
   padding: 1rem;
   box-shadow: var(--shadow);
   z-index: 1000;
-}
-
-.mobile-toggle {
-  display: block;
 }
 
 .hero {

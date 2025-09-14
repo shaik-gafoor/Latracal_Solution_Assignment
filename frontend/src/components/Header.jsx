@@ -2,6 +2,7 @@ import React, { useState } from "react";
 import { Link, useNavigate } from "react-router-dom";
 import { useTheme } from "../context/ThemeContext";
 import { useAuth } from "../context/AuthContext";
+import { useAppContext } from "../context/AppContext";
 
 const Header = () => {
   const [searchQuery, setSearchQuery] = useState("");
@@ -10,12 +11,32 @@ const Header = () => {
   const navigate = useNavigate();
   const { isDarkMode, toggleTheme } = useTheme();
   const { currentUser, logout, isAuthenticated } = useAuth();
+  const { actions } = useAppContext();
 
-  const handleSearch = (e) => {
+  const handleSearch = (query) => {
+    // Update the global search state
+    actions.setSearchQuery(query);
+    // Navigate to movies page if not already there
+    if (window.location.pathname !== "/movies") {
+      navigate("/movies");
+    }
+  };
+
+  const handleSearchInput = (e) => {
+    const value = e.target.value;
+    setSearchQuery(value);
+    handleSearch(value);
+  };
+
+  const handleClearSearch = () => {
+    setSearchQuery("");
+    handleSearch("");
+  };
+
+  const handleSearchSubmit = (e) => {
     e.preventDefault();
     if (searchQuery.trim()) {
       navigate(`/movies?search=${encodeURIComponent(searchQuery)}`);
-      setSearchQuery("");
     }
   };
 
@@ -38,17 +59,22 @@ const Header = () => {
         </Link>
 
         {/* Search Bar */}
-        <form className="search-form" onSubmit={handleSearch}>
+        <form className="search-form" onSubmit={handleSearchSubmit}>
           <div className="search-container">
             <input
               type="text"
               placeholder="Search movies..."
               value={searchQuery}
-              onChange={(e) => setSearchQuery(e.target.value)}
+              onChange={handleSearchInput}
               className="search-input"
             />
-            <button type="submit" className="search-btn">
-              🔍
+            <button
+              type="button"
+              className="search-btn"
+              onClick={searchQuery ? handleClearSearch : handleSearchSubmit}
+              title={searchQuery ? "Clear search" : "Search"}
+            >
+              {searchQuery ? "✕" : "🔍"}
             </button>
           </div>
         </form>

@@ -1,12 +1,15 @@
 import React, { useState } from "react";
 import { Link, useNavigate } from "react-router-dom";
 import { useTheme } from "../context/ThemeContext";
+import { useAuth } from "../context/AuthContext";
 
 const Header = () => {
   const [searchQuery, setSearchQuery] = useState("");
   const [isMenuOpen, setIsMenuOpen] = useState(false);
+  const [isUserMenuOpen, setIsUserMenuOpen] = useState(false);
   const navigate = useNavigate();
   const { isDarkMode, toggleTheme } = useTheme();
+  const { currentUser, logout, isAuthenticated } = useAuth();
 
   const handleSearch = (e) => {
     e.preventDefault();
@@ -14,6 +17,16 @@ const Header = () => {
       navigate(`/movies?search=${encodeURIComponent(searchQuery)}`);
       setSearchQuery("");
     }
+  };
+
+  const handleLogout = () => {
+    logout();
+    setIsUserMenuOpen(false);
+    navigate("/");
+  };
+
+  const toggleUserMenu = () => {
+    setIsUserMenuOpen(!isUserMenuOpen);
   };
 
   return (
@@ -62,8 +75,51 @@ const Header = () => {
           >
             {isDarkMode ? "☀️" : "🌙"}
           </button>
-          <button className="auth-btn login-btn">Login</button>
-          <button className="auth-btn signup-btn">Sign Up</button>
+
+          {isAuthenticated() ? (
+            <div className="user-menu">
+              <button
+                className="user-menu-toggle"
+                onClick={toggleUserMenu}
+                title={`Logged in as ${currentUser?.name}`}
+              >
+                <span className="user-avatar">👤</span>
+                <span className="user-name">{currentUser?.name}</span>
+                <span className="dropdown-arrow">
+                  {isUserMenuOpen ? "▲" : "▼"}
+                </span>
+              </button>
+
+              {isUserMenuOpen && (
+                <div className="user-dropdown">
+                  <Link
+                    to="/profile"
+                    className="dropdown-item"
+                    onClick={() => setIsUserMenuOpen(false)}
+                  >
+                    <span className="dropdown-icon">👤</span>
+                    Profile
+                  </Link>
+                  <button
+                    onClick={handleLogout}
+                    className="dropdown-item logout-item"
+                  >
+                    <span className="dropdown-icon">🚪</span>
+                    Logout
+                  </button>
+                </div>
+              )}
+            </div>
+          ) : (
+            <div className="auth-buttons">
+              <Link to="/login" className="auth-btn login-btn">
+                Login
+              </Link>
+              <Link to="/signup" className="auth-btn signup-btn">
+                Sign Up
+              </Link>
+            </div>
+          )}
         </div>
 
         {/* Mobile Menu Toggle */}

@@ -17,14 +17,6 @@ const Movies = () => {
 
   const [userRatings, setUserRatings] = useState({});
 
-  // Filters state
-  const [filters, setFilters] = useState({
-    genre: "",
-    year: "",
-    rating: "",
-    sortBy: "title",
-  });
-
   // Load user ratings from localStorage
   useEffect(() => {
     const savedRatings = localStorage.getItem("userMovieRatings");
@@ -42,47 +34,60 @@ const Movies = () => {
 
   // Load movie data from JSON
   useEffect(() => {
-    setTimeout(() => {
-      const processedMovies = moviesData.map((movie) => ({
-        id: movie.imdbID,
-        title: movie.Title,
-        genre: movie.Genre.split(",")[0].trim(), // Get first genre for filtering
-        fullGenre: movie.Genre,
-        year: parseInt(movie.Year),
-        rating:
-          movie.imdbRating && movie.imdbRating !== "N/A"
-            ? parseFloat(movie.imdbRating) / 2
-            : 0,
-        poster: movie.Poster,
-        description: movie.Plot,
-        type: movie.Type,
-        comingSoon: movie.ComingSoon || false,
-        director: movie.Director,
-        actors: movie.Actors,
-        runtime: movie.Runtime,
-        rated: movie.Rated,
-      }));
+    console.log("Loading movies data...");
+    console.log("MoviesData length:", moviesData?.length);
+    console.log("First movie:", moviesData?.[0]);
 
-      console.log("Processed movies:", processedMovies.length, processedMovies);
-      setMovies(processedMovies);
-      setFilteredMovies(processedMovies);
+    if (!moviesData || moviesData.length === 0) {
+      console.error("No movie data found!");
       setLoading(false);
-    }, 800);
+      return;
+    }
+
+    setTimeout(() => {
+      try {
+        const processedMovies = moviesData.map((movie) => ({
+          id: movie.imdbID,
+          title: movie.Title,
+          genre: movie.Genre.split(",")[0].trim(), // Get first genre for filtering
+          fullGenre: movie.Genre,
+          year: parseInt(movie.Year),
+          rating:
+            movie.imdbRating && movie.imdbRating !== "N/A"
+              ? parseFloat(movie.imdbRating) / 2
+              : 0,
+          poster: movie.Poster,
+          description: movie.Plot,
+          type: movie.Type,
+          comingSoon: movie.ComingSoon || false,
+          director: movie.Director,
+          actors: movie.Actors,
+          runtime: movie.Runtime,
+          rated: movie.Rated,
+        }));
+
+        console.log(
+          "Processed movies:",
+          processedMovies.length,
+          processedMovies
+        );
+        setMovies(processedMovies);
+        setFilteredMovies(processedMovies);
+        setLoading(false);
+      } catch (error) {
+        console.error("Error processing movies:", error);
+        setLoading(false);
+      }
+    }, 100); // Reduced timeout further
   }, []);
 
   // Handle URL search params
   useEffect(() => {
     const searchParams = new URLSearchParams(location.search);
     const searchQuery = searchParams.get("search");
-    const genreParam = searchParams.get("genre");
 
     if (searchQuery) {
       actions.setSearchQuery(searchQuery);
-      handleSearch(searchQuery);
-    }
-
-    if (genreParam) {
-      setFilters((prev) => ({ ...prev, genre: genreParam }));
     }
   }, [location.search]);
 
@@ -90,7 +95,7 @@ const Movies = () => {
   useEffect(() => {
     let result = [...movies];
 
-    // Search filter
+    // Search filter only
     if (state.searchQuery) {
       result = result.filter(
         (movie) =>
@@ -99,57 +104,15 @@ const Movies = () => {
       );
     }
 
-    // Genre filter
-    if (filters.genre) {
-      result = result.filter((movie) =>
-        movie.genre.toLowerCase().includes(filters.genre.toLowerCase())
-      );
-    }
-
-    // Year filter
-    if (filters.year) {
-      result = result.filter((movie) => movie.year.toString() === filters.year);
-    }
-
-    // Rating filter
-    if (filters.rating) {
-      const minRating = parseFloat(filters.rating);
-      result = result.filter((movie) => movie.rating >= minRating);
-    }
-
-    // Sort movies
-    result.sort((a, b) => {
-      switch (filters.sortBy) {
-        case "year":
-          return b.year - a.year;
-        case "rating":
-          return b.rating - a.rating;
-        case "title":
-        default:
-          return a.title.localeCompare(b.title);
-      }
-    });
+    // Default sort by title
+    result.sort((a, b) => a.title.localeCompare(b.title));
 
     setFilteredMovies(result);
     setCurrentPage(1);
-  }, [movies, state.searchQuery, filters]);
+  }, [movies, state.searchQuery]);
 
   const handleSearch = (query) => {
     actions.setSearchQuery(query);
-  };
-
-  const handleFilterChange = (key, value) => {
-    setFilters((prev) => ({ ...prev, [key]: value }));
-  };
-
-  const clearFilters = () => {
-    setFilters({
-      genre: "",
-      year: "",
-      rating: "",
-      sortBy: "title",
-    });
-    actions.setSearchQuery("");
   };
 
   // Pagination
@@ -171,6 +134,23 @@ const Movies = () => {
     return (
       <div className="main-content">
         <div className="loading">Loading movies...</div>
+      </div>
+    );
+  }
+
+  if (!loading && movies.length === 0) {
+    return (
+      <div className="main-content">
+        <div className="error">
+          <h2>No movies found</h2>
+          <p>There seems to be an issue loading the movie data.</p>
+          <button
+            onClick={() => window.location.reload()}
+            className="btn btn-primary"
+          >
+            Reload Page
+          </button>
+        </div>
       </div>
     );
   }
@@ -205,86 +185,6 @@ const Movies = () => {
         </div>
       </div>
 
-      {/* Filters */}
-      <div className="filters">
-        <div className="filters-grid">
-          <div className="filter-group">
-            <label className="filter-label">Genre</label>
-            <select
-              className="filter-select"
-              value={filters.genre}
-              onChange={(e) => handleFilterChange("genre", e.target.value)}
-            >
-              <option value="">All Genres</option>
-              <option value="action">Action</option>
-              <option value="sci-fi">Sci-Fi</option>
-              <option value="crime">Crime</option>
-              <option value="drama">Drama</option>
-              <option value="comedy">Comedy</option>
-              <option value="thriller">Thriller</option>
-            </select>
-          </div>
-
-          <div className="filter-group">
-            <label className="filter-label">Year</label>
-            <select
-              className="filter-select"
-              value={filters.year}
-              onChange={(e) => handleFilterChange("year", e.target.value)}
-            >
-              <option value="">All Years</option>
-              <option value="2024">2024</option>
-              <option value="2023">2023</option>
-              <option value="2022">2022</option>
-              <option value="2021">2021</option>
-              <option value="2020">2020</option>
-              <option value="2010">2010s</option>
-              <option value="2000">2000s</option>
-              <option value="1990">1990s</option>
-            </select>
-          </div>
-
-          <div className="filter-group">
-            <label className="filter-label">Minimum Rating</label>
-            <select
-              className="filter-select"
-              value={filters.rating}
-              onChange={(e) => handleFilterChange("rating", e.target.value)}
-            >
-              <option value="">Any Rating</option>
-              <option value="4.5">4.5+ Stars</option>
-              <option value="4.0">4.0+ Stars</option>
-              <option value="3.5">3.5+ Stars</option>
-              <option value="3.0">3.0+ Stars</option>
-            </select>
-          </div>
-
-          <div className="filter-group">
-            <label className="filter-label">Sort By</label>
-            <select
-              className="filter-select"
-              value={filters.sortBy}
-              onChange={(e) => handleFilterChange("sortBy", e.target.value)}
-            >
-              <option value="title">Title (A-Z)</option>
-              <option value="year">Year (Newest)</option>
-              <option value="rating">Rating (Highest)</option>
-            </select>
-          </div>
-        </div>
-
-        {(state.searchQuery ||
-          filters.genre ||
-          filters.year ||
-          filters.rating) && (
-          <div className="mt-3" style={{ textAlign: "center" }}>
-            <button onClick={clearFilters} className="btn btn-secondary">
-              Clear All Filters
-            </button>
-          </div>
-        )}
-      </div>
-
       {/* Results Info */}
       <div
         className="results-info mb-3"
@@ -313,7 +213,12 @@ const Movies = () => {
         <>
           <div className="movies-grid">
             {currentMovies.map((movie) => (
-              <MovieCard key={movie.id} movie={movie} />
+              <MovieCard
+                key={movie.id}
+                movie={movie}
+                userRatings={userRatings}
+                onRatingChange={handleRatingChange}
+              />
             ))}
           </div>
 
@@ -373,7 +278,7 @@ const Movies = () => {
 };
 
 // Movie Card Component
-const MovieCard = ({ movie }) => {
+const MovieCard = ({ movie, userRatings, onRatingChange }) => {
   const { actions } = useAppContext();
 
   const handleAddToWatchlist = (e) => {
@@ -407,7 +312,7 @@ const MovieCard = ({ movie }) => {
             <StarRating
               rating={userRatings[movie.id] || movie.rating}
               onRatingChange={(newRating) =>
-                handleRatingChange(movie.id, newRating)
+                onRatingChange(movie.id, newRating)
               }
               size="small"
             />

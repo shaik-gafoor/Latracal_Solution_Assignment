@@ -3,11 +3,13 @@ import { useParams, Link } from "react-router-dom";
 import StarRating from "../components/StarRating";
 import MoviePoster from "../components/MoviePoster";
 import { useAppContext } from "../context/AppContext";
+import { useAuth } from "../context/AuthContext";
 import moviesData from "../assets/movies.json";
 
 const MovieDetails = () => {
   const { id } = useParams();
   const { actions } = useAppContext();
+  const { currentUser, isAuthenticated } = useAuth();
   const [movie, setMovie] = useState(null);
   const [reviews, setReviews] = useState([]);
   const [loading, setLoading] = useState(true);
@@ -193,7 +195,13 @@ const MovieDetails = () => {
                 + Add to Watchlist
               </button>
               <button
-                onClick={() => setShowReviewForm(!showReviewForm)}
+                onClick={() => {
+                  if (!isAuthenticated()) {
+                    alert("Please login first to write a review");
+                    return;
+                  }
+                  setShowReviewForm(!showReviewForm);
+                }}
                 className="btn btn-secondary"
                 style={{
                   padding: "1rem 2rem",
@@ -205,6 +213,26 @@ const MovieDetails = () => {
               >
                 {showReviewForm ? "Cancel Review" : "Write Review"}
               </button>
+
+              {!isAuthenticated() && (
+                <div
+                  className="auth-notice"
+                  style={{
+                    color: "#ffd700",
+                    fontSize: "0.9rem",
+                    marginTop: "0.5rem",
+                    textAlign: "center",
+                  }}
+                >
+                  <Link
+                    to="/login"
+                    style={{ color: "#ffd700", textDecoration: "underline" }}
+                  >
+                    Please login first
+                  </Link>{" "}
+                  to write a review
+                </div>
+              )}
             </div>
           </div>
         </div>
@@ -264,10 +292,11 @@ const MovieDetails = () => {
       </div>
 
       {/* Quick Review Form */}
-      {showReviewForm && (
+      {showReviewForm && isAuthenticated() && (
         <div className="review-form">
           <QuickReviewForm
             movieId={movie.id}
+            currentUser={currentUser}
             onClose={() => setShowReviewForm(false)}
             onSubmit={(review) => {
               const newReviews = [review, ...reviews];
@@ -325,7 +354,7 @@ const MovieDetails = () => {
 };
 
 // Quick Review Form Component
-const QuickReviewForm = ({ movieId, onClose, onSubmit }) => {
+const QuickReviewForm = ({ movieId, currentUser, onClose, onSubmit }) => {
   const [rating, setRating] = useState(0);
   const [reviewText, setReviewText] = useState("");
 
@@ -334,7 +363,7 @@ const QuickReviewForm = ({ movieId, onClose, onSubmit }) => {
     if (rating > 0 && reviewText.trim()) {
       const newReview = {
         id: Date.now(),
-        user: "Current User", // This would be the logged-in user
+        user: currentUser?.name || "Anonymous User", // Use the logged-in user's name
         rating,
         text: reviewText,
         date: new Date().toISOString().split("T")[0],

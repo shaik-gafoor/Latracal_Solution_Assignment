@@ -5,8 +5,13 @@ const API_BASE_URL = "http://localhost:5000";
 const getAuthToken = () => {
   const user = localStorage.getItem("currentUser");
   if (user) {
-    const parsedUser = JSON.parse(user);
-    return parsedUser.token;
+    try {
+      const parsedUser = JSON.parse(user);
+      return parsedUser.token;
+    } catch (error) {
+      localStorage.removeItem("currentUser");
+      return null;
+    }
   }
   return null;
 };
@@ -29,6 +34,7 @@ const createHeaders = () => {
 const apiCall = async (endpoint, options = {}) => {
   try {
     const url = `${API_BASE_URL}${endpoint}`;
+
     const config = {
       headers: createHeaders(),
       ...options,
@@ -38,12 +44,20 @@ const apiCall = async (endpoint, options = {}) => {
     const data = await response.json();
 
     if (!response.ok) {
-      throw new Error(data.message || "API call failed");
+      // Handle validation errors specifically
+      if (data.errors && Array.isArray(data.errors)) {
+        const validationError = new Error(data.message || "Validation failed");
+        validationError.validationErrors = data.errors;
+        throw validationError;
+      }
+
+      throw new Error(
+        data.message || `HTTP ${response.status}: ${response.statusText}`
+      );
     }
 
     return data;
   } catch (error) {
-    console.error("API Error:", error);
     throw error;
   }
 };

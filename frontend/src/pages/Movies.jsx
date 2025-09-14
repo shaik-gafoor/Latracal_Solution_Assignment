@@ -34,12 +34,7 @@ const Movies = () => {
 
   // Load movie data from JSON
   useEffect(() => {
-    console.log("Loading movies data...");
-    console.log("MoviesData length:", moviesData?.length);
-    console.log("First movie:", moviesData?.[0]);
-
     if (!moviesData || moviesData.length === 0) {
-      console.error("No movie data found!");
       setLoading(false);
       return;
     }
@@ -66,16 +61,10 @@ const Movies = () => {
           rated: movie.Rated,
         }));
 
-        console.log(
-          "Processed movies:",
-          processedMovies.length,
-          processedMovies
-        );
         setMovies(processedMovies);
         setFilteredMovies(processedMovies);
         setLoading(false);
       } catch (error) {
-        console.error("Error processing movies:", error);
         setLoading(false);
       }
     }, 100); // Reduced timeout further
@@ -123,10 +112,6 @@ const Movies = () => {
     indexOfLastMovie
   );
   const totalPages = Math.ceil(filteredMovies.length / moviesPerPage);
-
-  console.log("Debug - filteredMovies:", filteredMovies.length);
-  console.log("Debug - currentMovies:", currentMovies.length);
-  console.log("Debug - loading:", loading);
 
   const paginate = (pageNumber) => setCurrentPage(pageNumber);
 

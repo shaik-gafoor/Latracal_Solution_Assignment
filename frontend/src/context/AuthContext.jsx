@@ -22,7 +22,6 @@ export const AuthProvider = ({ children }) => {
       try {
         setCurrentUser(JSON.parse(savedUser));
       } catch (error) {
-        console.error("Error parsing saved user data:", error);
         localStorage.removeItem("currentUser");
       }
     }
@@ -33,16 +32,15 @@ export const AuthProvider = ({ children }) => {
     try {
       const response = await authAPI.login(credentials);
       const user = {
-        id: response.id,
-        name: response.name,
-        email: response.email,
-        token: response.token,
+        id: response.data.user.id,
+        name: response.data.user.name,
+        email: response.data.user.email,
+        token: response.data.token,
       };
       setCurrentUser(user);
       localStorage.setItem("currentUser", JSON.stringify(user));
       return user;
     } catch (error) {
-      console.error("Login error:", error);
       throw error;
     }
   };
@@ -56,16 +54,15 @@ export const AuthProvider = ({ children }) => {
     try {
       const response = await authAPI.register(userData);
       const user = {
-        id: response.id,
-        name: response.name,
-        email: response.email,
-        token: response.token,
+        id: response.data.user.id,
+        name: response.data.user.name,
+        email: response.data.user.email,
+        token: response.data.token,
       };
       setCurrentUser(user);
       localStorage.setItem("currentUser", JSON.stringify(user));
       return user;
     } catch (error) {
-      console.error("Signup error:", error);
       throw error;
     }
   };

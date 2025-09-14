@@ -1,22 +1,30 @@
-import React, { useState, useEffect } from "react";
-import { Link, useNavigate } from "react-router-dom";
+import React, { useState, useEffect, useRef } from "react";
+import { Link, useNavigate, useLocation } from "react-router-dom";
 import StarRating from "../components/StarRating";
 import MoviePoster from "../components/MoviePoster";
-import moviesData from "../assets/movies.json";
+import { useMovies } from "../context/MoviesContext";
+import { useAuth } from "../context/AuthContext";
+import { getPosterUrl } from "../utils/posterUrls";
 
 const Home = () => {
   const navigate = useNavigate();
+  const location = useLocation();
+  const { movies, loading, fetchMovies } = useMovies();
+  const { currentUser } = useAuth();
   const [featuredMovies, setFeaturedMovies] = useState([]);
   const [trendingMovies, setTrendingMovies] = useState([]);
-  const [loading, setLoading] = useState(true);
   const [userRatings, setUserRatings] = useState({});
+  const fetchingRef = useRef(false);
 
-  // Load user ratings from localStorage
   useEffect(() => {
+    // Load user ratings from localStorage
     const savedRatings = localStorage.getItem("userMovieRatings");
     if (savedRatings) {
       setUserRatings(JSON.parse(savedRatings));
     }
+
+    // Always load movies when component mounts
+    loadMoviesData();
   }, []);
 
   // Handle rating change
@@ -26,43 +34,119 @@ const Home = () => {
     localStorage.setItem("userMovieRatings", JSON.stringify(updatedRatings));
   };
 
+  // Separate effect to handle user changes
   useEffect(() => {
-    // Simulate API call with real movie data
-    setTimeout(() => {
-      // Get featured movies (first 6 movies)
-      const featured = moviesData.slice(0, 6).map((movie) => ({
-        id: movie.imdbID,
-        title: movie.Title,
-        genre: movie.Genre,
-        year: parseInt(movie.Year),
-        rating: parseFloat(movie.imdbRating) / 2, // Convert to 5-star scale
-        poster: movie.Poster,
-        description: movie.Plot,
-        type: movie.Type,
-        comingSoon: movie.ComingSoon || false,
-      }));
+    // Reload movies when user authentication changes
+    loadMoviesData();
+  }, [currentUser]);
 
-      // Get trending movies (movies with highest ratings)
-      const trending = moviesData
-        .filter((movie) => movie.imdbRating && movie.imdbRating !== "N/A")
-        .sort((a, b) => parseFloat(b.imdbRating) - parseFloat(a.imdbRating))
-        .slice(0, 6)
-        .map((movie) => ({
+  // Effect to handle navigation changes - reload movies when returning to Home
+  useEffect(() => {
+    if (location.pathname === "/") {
+      // Reset fetching ref and load movies when navigating to home
+      fetchingRef.current = false;
+      loadMoviesData();
+    }
+  }, [location.pathname]);
+
+  // Function to load movies data
+  const loadMoviesData = () => {
+    // Prevent multiple simultaneous fetch calls
+    if (fetchingRef.current) {
+      return;
+    }
+
+    // Load movies from backend API if user is logged in
+    if (currentUser) {
+      fetchingRef.current = true;
+
+      fetchMovies()
+        .then(() => {
+          // Movies loaded successfully
+        })
+        .catch((error) => {
+          // Fallback to static data if API fails
+          loadStaticMovies();
+        })
+        .finally(() => {
+          fetchingRef.current = false;
+        });
+    } else {
+      // Use static data if not logged in
+      loadStaticMovies();
+    }
+  };
+
+  // Fallback function to load static data
+  const loadStaticMovies = () => {
+    // Use static data as fallback
+    import("../assets/movies.json")
+      .then((moviesData) => {
+        const data = moviesData.default;
+        // Get featured movies (first 6 movies)
+        const featured = data.slice(0, 6).map((movie) => ({
           id: movie.imdbID,
           title: movie.Title,
           genre: movie.Genre,
           year: parseInt(movie.Year),
           rating: parseFloat(movie.imdbRating) / 2, // Convert to 5-star scale
-          poster: movie.Poster,
+          poster: getPosterUrl(movie.Title, movie.Poster),
+          description: movie.Plot,
           type: movie.Type,
           comingSoon: movie.ComingSoon || false,
         }));
 
-      setFeaturedMovies(featured);
-      setTrendingMovies(trending);
-      setLoading(false);
-    }, 800);
-  }, []);
+        // Get trending movies (movies with highest ratings)
+        const trending = data
+          .filter((movie) => movie.imdbRating && movie.imdbRating !== "N/A")
+          .sort((a, b) => parseFloat(b.imdbRating) - parseFloat(a.imdbRating))
+          .slice(0, 6)
+          .map((movie) => ({
+            id: movie.imdbID,
+            title: movie.Title,
+            genre: movie.Genre,
+            year: parseInt(movie.Year),
+            rating: parseFloat(movie.imdbRating) / 2,
+            poster: getPosterUrl(movie.Title, movie.Poster),
+            description: movie.Plot,
+            type: movie.Type,
+            comingSoon: movie.ComingSoon || false,
+          }));
+
+        setFeaturedMovies(featured);
+        setTrendingMovies(trending);
+      })
+      .catch((error) => {
+        // Handle error silently or with user-friendly message
+      });
+  };
+
+  // Process backend movies into the format expected by the component
+  useEffect(() => {
+    if (movies && movies.length > 0) {
+      // Convert backend movies to frontend format
+      const backendMovies = movies.map((movie) => ({
+        id: movie._id,
+        title: movie.title,
+        genre: movie.genre.join(", "),
+        year: movie.releaseYear,
+        rating: movie.averageRating || 0,
+        poster: getPosterUrl(movie.title, movie.posterUrl),
+        description: movie.description,
+        type: "movie",
+        comingSoon: false,
+      }));
+
+      // Set featured and trending movies from backend data
+      setFeaturedMovies(backendMovies.slice(0, 6));
+      setTrendingMovies(
+        backendMovies.sort((a, b) => b.rating - a.rating).slice(0, 6)
+      );
+    } else if (!loading && featuredMovies.length === 0) {
+      // If no backend movies and not loading, try static movies
+      loadStaticMovies();
+    }
+  }, [movies, loading]);
 
   if (loading) {
     return (

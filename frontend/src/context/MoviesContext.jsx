@@ -1,4 +1,10 @@
-import React, { createContext, useContext, useState, useEffect } from "react";
+import React, {
+  createContext,
+  useContext,
+  useState,
+  useEffect,
+  useCallback,
+} from "react";
 import { moviesAPI, reviewsAPI, watchlistAPI } from "../services/api";
 import { useAuth } from "./AuthContext";
 
@@ -19,7 +25,7 @@ export const MoviesProvider = ({ children }) => {
   const { currentUser } = useAuth();
 
   // Fetch all movies
-  const fetchMovies = async (params = {}) => {
+  const fetchMovies = useCallback(async (params = {}) => {
     setLoading(true);
     setError(null);
     try {
@@ -27,14 +33,13 @@ export const MoviesProvider = ({ children }) => {
       setMovies(response.movies || response.data || []);
     } catch (error) {
       setError(error.message);
-      console.error("Error fetching movies:", error);
     } finally {
       setLoading(false);
     }
-  };
+  }, []);
 
   // Fetch single movie
-  const fetchMovie = async (movieId) => {
+  const fetchMovie = useCallback(async (movieId) => {
     setLoading(true);
     setError(null);
     try {
@@ -42,12 +47,11 @@ export const MoviesProvider = ({ children }) => {
       return response.movie || response.data;
     } catch (error) {
       setError(error.message);
-      console.error("Error fetching movie:", error);
       throw error;
     } finally {
       setLoading(false);
     }
-  };
+  }, []);
 
   // Search movies
   const searchMovies = async (query) => {
@@ -58,7 +62,7 @@ export const MoviesProvider = ({ children }) => {
       return response.movies || response.data || [];
     } catch (error) {
       setError(error.message);
-      console.error("Error searching movies:", error);
+
       return [];
     } finally {
       setLoading(false);
@@ -75,7 +79,7 @@ export const MoviesProvider = ({ children }) => {
       return response.movie || response.data;
     } catch (error) {
       setError(error.message);
-      console.error("Error adding movie:", error);
+
       throw error;
     } finally {
       setLoading(false);
@@ -92,7 +96,7 @@ export const MoviesProvider = ({ children }) => {
       return response.movie || response.data;
     } catch (error) {
       setError(error.message);
-      console.error("Error updating movie:", error);
+
       throw error;
     } finally {
       setLoading(false);
@@ -108,7 +112,7 @@ export const MoviesProvider = ({ children }) => {
       await fetchMovies(); // Refresh the movies list
     } catch (error) {
       setError(error.message);
-      console.error("Error deleting movie:", error);
+
       throw error;
     } finally {
       setLoading(false);
@@ -121,7 +125,6 @@ export const MoviesProvider = ({ children }) => {
       const response = await reviewsAPI.getMovieReviews(movieId, params);
       return response.reviews || response.data || [];
     } catch (error) {
-      console.error("Error fetching reviews:", error);
       return [];
     }
   };
@@ -131,7 +134,6 @@ export const MoviesProvider = ({ children }) => {
       const response = await reviewsAPI.addReview(movieId, reviewData);
       return response.review || response.data;
     } catch (error) {
-      console.error("Error adding review:", error);
       throw error;
     }
   };
@@ -145,7 +147,6 @@ export const MoviesProvider = ({ children }) => {
       );
       return response.review || response.data;
     } catch (error) {
-      console.error("Error updating review:", error);
       throw error;
     }
   };
@@ -154,7 +155,6 @@ export const MoviesProvider = ({ children }) => {
     try {
       await reviewsAPI.deleteReview(movieId, reviewId);
     } catch (error) {
-      console.error("Error deleting review:", error);
       throw error;
     }
   };
@@ -167,7 +167,6 @@ export const MoviesProvider = ({ children }) => {
       const response = await watchlistAPI.getWatchlist(currentUser.id, params);
       return response.watchlist || response.data || [];
     } catch (error) {
-      console.error("Error fetching watchlist:", error);
       return [];
     }
   };
@@ -185,7 +184,6 @@ export const MoviesProvider = ({ children }) => {
       const response = await watchlistAPI.addToWatchlist(currentUser.id, data);
       return response.watchlistItem || response.data;
     } catch (error) {
-      console.error("Error adding to watchlist:", error);
       throw error;
     }
   };
@@ -201,7 +199,6 @@ export const MoviesProvider = ({ children }) => {
       );
       return response.watchlistItem || response.data;
     } catch (error) {
-      console.error("Error updating watchlist item:", error);
       throw error;
     }
   };
@@ -212,7 +209,6 @@ export const MoviesProvider = ({ children }) => {
     try {
       await watchlistAPI.removeFromWatchlist(currentUser.id, watchlistId);
     } catch (error) {
-      console.error("Error removing from watchlist:", error);
       throw error;
     }
   };

@@ -77,12 +77,23 @@ function Signup() {
         name: formData.name,
         email: formData.email,
         password: formData.password,
+        confirmPassword: formData.confirmPassword,
       });
       navigate("/");
     } catch (error) {
-      setErrors({
-        general: error.message || "Account creation failed. Please try again.",
-      });
+      // Handle validation errors from backend
+      if (error.validationErrors && Array.isArray(error.validationErrors)) {
+        const backendErrors = {};
+        error.validationErrors.forEach((err) => {
+          backendErrors[err.field] = err.message;
+        });
+        setErrors(backendErrors);
+      } else {
+        setErrors({
+          general:
+            error.message || "Account creation failed. Please try again.",
+        });
+      }
     } finally {
       setIsLoading(false);
     }

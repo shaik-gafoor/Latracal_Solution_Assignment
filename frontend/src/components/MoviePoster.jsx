@@ -1,7 +1,11 @@
 import React, { useState } from "react";
+import { getPosterUrl } from "../utils/posterUrls";
 
 const MoviePoster = ({ title, src, alt, className = "movie-poster" }) => {
   const [imageError, setImageError] = useState(false);
+
+  // Get reliable poster URL
+  const posterUrl = getPosterUrl(title, src);
 
   // Create a simple colored placeholder based on movie title
   const generatePlaceholder = (title) => {
@@ -30,17 +34,17 @@ const MoviePoster = ({ title, src, alt, className = "movie-poster" }) => {
     `)}`;
   };
 
-  const handleImageError = () => {
-    setImageError(true);
-  };
-
-  // Convert HTTP to HTTPS for better compatibility
+  // Get image source - show poster immediately, fallback on error
   const getImageSrc = () => {
-    if (imageError || !src) {
+    if (imageError || !posterUrl) {
       return generatePlaceholder(title);
     }
     // Convert HTTP to HTTPS for better compatibility
-    return src.replace(/^http:/, "https:");
+    return posterUrl.replace(/^http:/, "https:");
+  };
+
+  const handleImageError = () => {
+    setImageError(true);
   };
 
   return (

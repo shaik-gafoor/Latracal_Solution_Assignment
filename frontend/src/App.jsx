@@ -9,6 +9,7 @@ import Profile from "./pages/Profile";
 import ReviewForm from "./pages/ReviewForm";
 import Login from "./pages/Login";
 import Signup from "./pages/Signup";
+import TestPage from "./pages/TestPage";
 import { AppProvider } from "./context/AppContext";
 import { ThemeProvider } from "./context/ThemeContext";
 import { AuthProvider } from "./context/AuthContext";
@@ -20,7 +21,12 @@ const App = () => (
     <AuthProvider>
       <MoviesProvider>
         <AppProvider>
-          <Router>
+          <Router
+            future={{
+              v7_startTransition: true,
+              v7_relativeSplatPath: true,
+            }}
+          >
             <div className="App">
               <Header />
               <Routes>
@@ -31,6 +37,7 @@ const App = () => (
                 <Route path="/movies/:id/review" element={<ReviewForm />} />
                 <Route path="/login" element={<Login />} />
                 <Route path="/signup" element={<Signup />} />
+                <Route path="/test" element={<TestPage />} />
               </Routes>
               <Footer />
             </div>

@@ -1,84 +1,127 @@
 import React, { useState, useEffect } from "react";
 import { Link } from "react-router-dom";
 import { useAuth } from "../context/AuthContext";
+import { usersAPI } from "../services/api";
 
 const Profile = () => {
   const { currentUser, isAuthenticated } = useAuth();
-  const [userReviews, setUserReviews] = useState([]);
   const [userStats, setUserStats] = useState({
     totalReviews: 0,
     averageRating: 0,
-    joinedDate: "",
+    joinedDate: "Recently",
   });
+  const [loading, setLoading] = useState(true);
+
+  // Get user initials for avatar
+  const getUserInitials = (name) => {
+    if (!name) return "U";
+    return name
+      .split(" ")
+      .map((n) => n[0])
+      .join("")
+      .toUpperCase()
+      .slice(0, 2);
+  };
 
   useEffect(() => {
     if (currentUser) {
       loadUserData();
+    } else {
+      setLoading(false);
     }
   }, [currentUser]);
 
-  const loadUserData = () => {
-    // Load user reviews from localStorage
-    const allReviews = [];
-    const keys = Object.keys(localStorage);
+  const loadUserData = async () => {
+    try {
+      setLoading(true);
 
-    keys.forEach((key) => {
-      if (key.startsWith("reviews_")) {
-        const movieReviews = JSON.parse(localStorage.getItem(key) || "[]");
-        const userMovieReviews = movieReviews.filter(
-          (review) => review.user === currentUser.name
-        );
-        allReviews.push(...userMovieReviews);
+      // Only try to fetch data if user has a valid MongoDB ObjectId
+      if (currentUser && currentUser.id && currentUser.id.length === 24) {
+        try {
+          // Fetch both user profile and reviews
+          const [profileResponse, reviewsResponse] = await Promise.allSettled([
+            usersAPI.getUserProfile(currentUser.id),
+            usersAPI.getUserReviews(currentUser.id),
+          ]);
+
+          let joinedDate = "Recently";
+          if (
+            profileResponse.status === "fulfilled" &&
+            profileResponse.value.data?.user?.joinDate
+          ) {
+            const joinDate = new Date(profileResponse.value.data.user.joinDate);
+            joinedDate = joinDate.toLocaleDateString("en-US", {
+              month: "long",
+              year: "numeric",
+            });
+          }
+
+          // Process reviews
+          let totalReviews = 0;
+          let averageRating = 0;
+          if (reviewsResponse.status === "fulfilled") {
+            const reviews = reviewsResponse.value.data?.reviews || [];
+            totalReviews = reviews.length;
+            if (totalReviews > 0) {
+              const totalRating = reviews.reduce(
+                (sum, review) => sum + (review.rating || 0),
+                0
+              );
+              averageRating = (totalRating / totalReviews).toFixed(1);
+            }
+          }
+
+          setUserStats({
+            totalReviews,
+            averageRating,
+            joinedDate,
+          });
+        } catch (apiError) {
+          // API call failed, use defaults
+          setUserStats({
+            totalReviews: 0,
+            averageRating: 0,
+            joinedDate: "Recently",
+          });
+        }
+      } else {
+        // User doesn't have valid ObjectId, use defaults
+        setUserStats({
+          totalReviews: 0,
+          averageRating: 0,
+          joinedDate: "Recently",
+        });
       }
-    });
-
-    setUserReviews(allReviews);
-
-    // Calculate user stats
-    const totalReviews = allReviews.length;
-    const averageRating =
-      totalReviews > 0
-        ? (
-            allReviews.reduce((sum, review) => sum + review.rating, 0) /
-            totalReviews
-          ).toFixed(1)
-        : 0;
-
-    // Get user registration date
-    const users = JSON.parse(localStorage.getItem("users") || "[]");
-    const userData = users.find((user) => user.id === currentUser.id);
-    const joinedDate = userData
-      ? new Date(userData.createdAt).toLocaleDateString()
-      : "Unknown";
-
-    setUserStats({
-      totalReviews,
-      averageRating,
-      joinedDate,
-    });
+    } catch (error) {
+      // Set defaults if anything fails
+      setUserStats({
+        totalReviews: 0,
+        averageRating: 0,
+        joinedDate: "Recently",
+      });
+    } finally {
+      setLoading(false);
+    }
   };
 
-  if (!isAuthenticated()) {
+  if (!isAuthenticated() || !currentUser) {
     return (
       <div className="main-content">
         <div className="auth-required-container">
-          <div className="auth-required-card">
-            <div className="auth-required-icon">🔐</div>
-            <h1 className="auth-required-title">Login Required</h1>
-            <p className="auth-required-message">
-              Please log in first to view your profile and access your reviews
-              and watchlist.
-            </p>
-            <div className="auth-required-actions">
-              <Link to="/login" className="btn btn-primary">
-                Login
-              </Link>
-              <Link to="/signup" className="btn btn-secondary">
-                Sign Up
-              </Link>
-            </div>
-          </div>
+          <h1>Login Required</h1>
+          <p>Please log in to view your profile.</p>
+          <Link to="/login" className="btn btn-primary">
+            Login
+          </Link>
         </div>
+      </div>
+    );
+  }
+
+  if (loading) {
+    return (
+      <div className="main-content">
+        <div className="loading">Loading profile...</div>
       </div>
     );
   }
@@ -86,74 +129,195 @@ const Profile = () => {
   return (
     <div className="main-content">
       <div className="profile-container">
-        {/* Profile Header */}
         <div className="profile-header">
-          <div className="profile-avatar">
-            <span className="avatar-icon">👤</span>
-          </div>
-          <div className="profile-info">
-            <h1 className="profile-name">{currentUser.name}</h1>
-            <p className="profile-email">{currentUser.email}</p>
-            <p className="profile-joined">Joined on {userStats.joinedDate}</p>
-          </div>
-        </div>
-
-        {/* User Stats */}
-        <div className="profile-stats">
-          <div className="stat-card">
-            <div className="stat-number">{userStats.totalReviews}</div>
-            <div className="stat-label">Reviews Written</div>
-          </div>
-          <div className="stat-card">
-            <div className="stat-number">{userStats.averageRating}</div>
-            <div className="stat-label">Average Rating</div>
-          </div>
-          <div className="stat-card">
-            <div className="stat-number">⭐</div>
-            <div className="stat-label">Movie Critic</div>
-          </div>
-        </div>
-
-        {/* User Reviews Section */}
-        <div className="profile-section">
-          <h2 className="section-title">My Reviews</h2>
-
-          {userReviews.length > 0 ? (
-            <div className="reviews-list">
-              {userReviews.map((review, index) => (
-                <div key={`${review.id}-${index}`} className="review-item">
-                  <div className="review-header">
-                    <div className="review-rating">
-                      {"⭐".repeat(review.rating)}
-                      <span className="rating-number">({review.rating}/5)</span>
-                    </div>
-                    <div className="review-date">
-                      {new Date(review.date).toLocaleDateString()}
-                    </div>
-                  </div>
-                  <div className="review-content">
-                    <p>"{review.text}"</p>
-                  </div>
-                </div>
-              ))}
+          <div className="user-avatar">
+            <div
+              className="avatar-circle"
+              style={{
+                width: "80px",
+                height: "80px",
+                borderRadius: "50%",
+                backgroundColor: "#4a90e2",
+                display: "flex",
+                alignItems: "center",
+                justifyContent: "center",
+                color: "white",
+                fontSize: "24px",
+                fontWeight: "bold",
+                marginBottom: "15px",
+              }}
+            >
+              {getUserInitials(currentUser?.name)}
             </div>
-          ) : (
-            <div className="empty-state">
-              <div className="empty-icon">📝</div>
-              <p className="empty-message">
-                You haven't written any reviews yet.
+          </div>
+          <div className="user-info">
+            <h1 style={{ marginBottom: "8px", color: "#333" }}>
+              Welcome, {currentUser?.name || "User"}!
+            </h1>
+            <p
+              className="user-email"
+              style={{
+                fontSize: "16px",
+                color: "#666",
+                marginBottom: "5px",
+              }}
+            >
+              {currentUser?.email || "No email available"}
+            </p>
+            <p
+              className="member-since"
+              style={{
+                fontSize: "14px",
+                color: "#888",
+                marginBottom: "10px",
+              }}
+            >
+              Member since {userStats.joinedDate}
+            </p>
+            <div className="user-status">
+              <span
+                className="status-badge"
+                style={{
+                  backgroundColor: "#28a745",
+                  color: "white",
+                  padding: "4px 12px",
+                  borderRadius: "15px",
+                  fontSize: "12px",
+                  fontWeight: "bold",
+                }}
+              >
+                Active Member
+              </span>
+            </div>
+          </div>
+        </div>
+
+        <div
+          className="profile-stats"
+          style={{
+            display: "flex",
+            gap: "20px",
+            margin: "30px 0",
+            flexWrap: "wrap",
+          }}
+        >
+          <div
+            className="stat-card"
+            style={{
+              backgroundColor: "#f8f9fa",
+              padding: "20px",
+              borderRadius: "8px",
+              textAlign: "center",
+              minWidth: "150px",
+              border: "1px solid #e9ecef",
+            }}
+          >
+            <h3
+              style={{
+                fontSize: "28px",
+                margin: "0 0 8px 0",
+                color: "#4a90e2",
+                fontWeight: "bold",
+              }}
+            >
+              {userStats.totalReviews || 0}
+            </h3>
+            <p style={{ margin: "0", color: "#666", fontWeight: "500" }}>
+              Reviews Written
+            </p>
+            {userStats.totalReviews > 0 && (
+              <p
+                style={{ margin: "5px 0 0 0", color: "#888", fontSize: "12px" }}
+              >
+                {userStats.totalReviews === 1
+                  ? "1 review"
+                  : `${userStats.totalReviews} reviews`}
               </p>
-              <Link to="/movies" className="btn btn-primary">
-                Explore Movies
-              </Link>
-            </div>
-          )}
+            )}
+            {userStats.totalReviews === 0 && (
+              <p
+                style={{ margin: "5px 0 0 0", color: "#ccc", fontSize: "12px" }}
+              >
+                No reviews yet
+              </p>
+            )}
+          </div>
+          <div
+            className="stat-card"
+            style={{
+              backgroundColor: "#f8f9fa",
+              padding: "20px",
+              borderRadius: "8px",
+              textAlign: "center",
+              minWidth: "150px",
+              border: "1px solid #e9ecef",
+            }}
+          >
+            <h3
+              style={{
+                fontSize: "28px",
+                margin: "0 0 8px 0",
+                color: "#ffc107",
+                fontWeight: "bold",
+              }}
+            >
+              {userStats.averageRating || "0.0"}
+            </h3>
+            <p style={{ margin: "0", color: "#666", fontWeight: "500" }}>
+              Average Rating
+            </p>
+            {userStats.averageRating > 0 && (
+              <p
+                style={{ margin: "5px 0 0 0", color: "#888", fontSize: "12px" }}
+              >
+                out of 5 stars
+              </p>
+            )}
+            {userStats.averageRating === 0 && (
+              <p
+                style={{ margin: "5px 0 0 0", color: "#ccc", fontSize: "12px" }}
+              >
+                No ratings yet
+              </p>
+            )}
+          </div>
+          <div
+            className="stat-card"
+            style={{
+              backgroundColor: "#f8f9fa",
+              padding: "20px",
+              borderRadius: "8px",
+              textAlign: "center",
+              minWidth: "150px",
+              border: "1px solid #e9ecef",
+            }}
+          >
+            <h3
+              style={{
+                fontSize: "28px",
+                margin: "0 0 8px 0",
+                color: "#28a745",
+                fontWeight: "bold",
+              }}
+            >
+              {currentUser?.id ? "✓" : "✗"}
+            </h3>
+            <p style={{ margin: "0", color: "#666", fontWeight: "500" }}>
+              Profile Status
+            </p>
+            <p style={{ margin: "5px 0 0 0", color: "#888", fontSize: "12px" }}>
+              {currentUser?.id ? "Verified User" : "Unverified"}
+            </p>
+          </div>
         </div>
 
-        {/* Account Actions */}
         <div className="profile-actions">
-          <button className="btn btn-outline">Edit Profile</button>
-          <button className="btn btn-outline">Change Password</button>
+          <Link to="/movies" className="btn btn-primary">
+            Browse Movies
+          </Link>
+          <Link to="/watchlist" className="btn btn-secondary">
+            View Watchlist
+          </Link>
         </div>
       </div>
     </div>
